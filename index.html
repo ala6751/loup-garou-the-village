@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111522">
+<title>LOUP-GAROU: THE VILLAGE</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;padding:22px 14px;display:flex;justify-content:center;align-items:flex-start;background:radial-gradient(circle at 50% 8%,#49435b,transparent 42%),linear-gradient(180deg,#111522,#070910);color:#f4eee4;font-family:Georgia,serif}
+.container{width:100%;max-width:480px;text-align:center;margin:auto}
+.moon{font-size:62px;filter:drop-shadow(0 0 22px #d9c9a0)}
+.subtitle{color:#b9a77f;letter-spacing:4px;font-size:10px;margin:8px}
+h1{font-size:31px;color:#e9dfc8;line-height:1.2;text-shadow:0 0 20px #8e7950}
+.description{color:#aaa9b2;line-height:1.7;font-size:13px;margin:14px 0 22px}
+.panel{background:rgba(30,32,43,.94);border:1px solid #655b48;border-radius:15px;padding:20px 16px;margin:12px 0;box-shadow:0 15px 45px #0008}
+h2{font-size:17px;color:#d8c7a2;letter-spacing:2px;margin-bottom:16px}
+h3{font-size:14px;color:#d8c7a2;margin:18px 0 10px;text-align:left}
+input,select{width:100%;padding:13px;margin:7px 0;border-radius:8px;border:1px solid #57515a;background:#11141e;color:white;text-align:center;font-size:15px;outline:none}
+input:focus,select:focus{border-color:#b9a77f}
+button{width:100%;padding:14px;margin:7px 0;border:0;border-radius:8px;font-weight:bold;letter-spacing:1px;font-size:13px;cursor:pointer}
+button:disabled{opacity:.5}
+.create{background:linear-gradient(135deg,#a68a55,#72552d);color:white}
+.join,.secondary{background:transparent;border:1px solid #a68a55;color:#e6d7b8}
+.danger{background:#492b30;border:1px solid #8b4b50;color:#f5d9d9}
+#message,#roomMessage,#hostMessage{color:#e5d1a7;font-size:13px;margin:10px 0;line-height:1.6;overflow-wrap:anywhere}
+#room{display:none}
+.code{font-size:29px;letter-spacing:7px;color:#e9cf91;margin:13px;font-weight:bold}
+.players-list{max-height:250px;overflow-y:auto;margin:12px 0}
+.player{display:flex;justify-content:space-between;align-items:center;padding:10px;margin:6px 0;background:#11141e;border:1px solid #484253;border-radius:7px;font-size:13px}
+.host{color:#e9cf91;font-size:10px}
+.count{color:#d8c7a2;margin:10px 0;font-size:14px}
+.footer{margin-top:20px;font-size:10px;color:#777783;letter-spacing:2px}
+.hidden{display:none!important}
+.row{display:grid;grid-template-columns:1fr 90px;gap:10px;align-items:center;margin:7px 0;text-align:left}
+.row label{font-size:13px;color:#e3d9c6}
+.row input{margin:0;padding:10px}
+.small{font-size:11px;color:#aaa9b2;line-height:1.5}
+.pill{display:inline-block;border:1px solid #76694f;color:#ddc99e;border-radius:20px;padding:5px 9px;font-size:10px;margin:3px}
+hr{border:0;border-top:1px solid #484253;margin:15px 0}
+.role-card{padding:18px;border:1px solid #b99a5e;border-radius:12px;background:linear-gradient(145deg,#252333,#11141e);margin:14px 0}
+.role-name{font-size:24px;color:#f0d69a;margin:10px 0}
+.manual-item{padding:10px;margin:8px 0;background:#11141e;border:1px solid #484253;border-radius:8px;text-align:left}
+.manual-item select{margin-top:6px}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="moon">🌕</div>
+<div class="subtitle">THE NIGHT IS COMING</div>
+<h1>LOUP-GAROU<br>THE VILLAGE</h1>
+<p class="description">A village. A secret.<br>Who can you trust when darkness falls?</p>
+
+<section class="panel" id="lobby">
+<h2>ENTER THE VILLAGE</h2>
+<input id="player" placeholder="Your player name" maxlength="16">
+<button class="create" id="createBtn" onclick="createRoom()">CREATE A ROOM</button>
+<input id="roomCode" placeholder="Enter room code" maxlength="6">
+<button class="join" id="joinBtn" onclick="joinRoom()">JOIN A ROOM</button>
+<div id="message"></div>
+</section>
+
+<section class="panel" id="room">
+<h2>YOUR VILLAGE</h2>
+<p class="small">ROOM CODE</p>
+<div class="code" id="codeDisplay"></div>
+<button class="secondary" onclick="copyCode()">COPY ROOM CODE</button>
+<div class="count" id="count">0 / 50 PLAYERS</div>
+<h2>PLAYERS</h2>
+<div class="players-list" id="players"></div>
+<div id="roomMessage"></div>
+
+<section id="roleCard" class="role-card hidden">
+<div class="small">YOUR SECRET ROLE</div>
+<div class="role-name" id="myRole"></div>
+<div class="small" id="roleDescription"></div>
+</section>
+
+<section id="hostPanel" class="hidden">
+<hr>
+<h2>HOST CONTROL</h2>
+<span class="pill">HOST + PLAYER</span>
+
+<h3>ROOM SETTINGS</h3>
+<div class="row">
+<label for="maxPlayers">Maximum players (5–50)</label>
+<input id="maxPlayers" type="number" min="5" max="50" value="50">
+</div>
+<div class="row">
+<label for="nightTime">Night duration (seconds)</label>
+<input id="nightTime" type="number" min="10" max="600" value="60">
+</div>
+<div class="row">
+<label for="dayTime">Discussion duration (seconds)</label>
+<input id="dayTime" type="number" min="30" max="1800" value="180">
+</div>
+<div class="row">
+<label for="voteTime">Voting duration (seconds)</label>
+<input id="voteTime" type="number" min="10" max="600" value="45">
+</div>
+
+<h3>ROLE COUNTS</h3>
+<div class="small">Set each role count. Use 0 to disable it. Total must equal the number of players.</div>
+<div id="roleFields"></div>
+
+<h3>ROLE DISTRIBUTION</h3>
+<select id="distribution">
+<option value="random">Random distribution</option>
+<option value="manual">Manual assignment</option>
+<option value="both">Host chooses Random or Manual</option>
+</select>
+
+<button class="create" onclick="saveSettings()">SAVE SETTINGS</button>
+<button class="secondary" onclick="startSetup()">CHECK GAME SETUP</button>
+
+<div id="manualPanel" class="hidden">
+<hr>
+<h3>MANUAL ROLE ASSIGNMENT</h3>
+<p class="small">Choose roles for every other player. The host's role will be random from the remaining roles.</p>
+<div id="manualFields"></div>
+<button class="create" onclick="startManualGame()">CONFIRM AND START</button>
+</div>
+
+<div id="hostMessage"></div>
+</section>
+
+<button class="danger" onclick="leaveRoom()">LEAVE ROOM</button>
+</section>
+
+<div class="footer">5 - 50 PLAYERS · TRUST NO ONE</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+const firebaseConfig={
+ apiKey:"AIzaSyBdsUkDpVRvmRJvJUUUgVeIpsWdLtJ8nhE",
+ authDomain:"loup-garou-9a3f7.firebaseapp.com",
+ databaseURL:"https://loup-garou-9a3f7-default-rtdb.europe-west1.firebasedatabase.app",
+ projectId:"loup-garou-9a3f7",
+ storageBucket:"loup-garou-9a3f7.firebasestorage.app",
+ messagingSenderId:"603938789997",
+ appId:"1:603938789997:web:52715c91295b744b16bd64"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth=firebase.auth();
+const db=firebase.database();
+
+const ROLE_DEFS=[
+ ["werewolf","🐺 Werewolf","A member of the wolf pack."],
+ ["grandLoup","👑 Grand Loup","Has one extra kill for the entire game."],
+ ["loupSilence","🤫 Loup Silence","Can silence one player each night."],
+ ["voyante","🔮 Voyante (Seer)","Can investigate a player's identity."],
+ ["sorciere","🧙 Sorcière (Witch)","A village witch with special potions."],
+ ["chasseur","🏹 Chasseur (Hunter)","Can take another player down when eliminated."],
+ ["cupidon","💘 Cupidon (Cupid)","Links two players as lovers."],
+ ["garde","🛡️ Guard","Can protect a player at night."],
+ ["villageois","👨 Villager","Find the wolves and save the village."]
+];
+
+let currentRoom=null;
+let playerName="";
+let roomListener=null;
+let roomData=null;
+let settingsLoaded=false;
+
+const $=id=>document.getElementById(id);
+
+function msg(t){
+ $("message").textContent=t;
+}
+
+function setLoading(v){
+ $("createBtn").disabled=v;
+ $("joinBtn").disabled=v;
+}
+
+function makeCode(){
+ return Math.random().toString(36).substring(2,8).toUpperCase();
+}
+
+async function ensureLogin(){
+ if(!auth.currentUser) await auth.signInAnonymously();
+ return auth.currentUser.uid;
+}
+
+function defaultSettings(){
+ return {
+  maxPlayers:50,
+  timers:{night:60,day:180,vote:45},
+  distribution:"both",
+  roles:{
+   werewolf:2,
+   grandLoup:0,
+   loupSilence:0,
+   voyante:1,
+   sorciere:1,
+   chasseur:1,
+   cupidon:1,
+   garde:1,
+   villageois:3
+  }
+ };
+}
+
+function buildRoleFields(s){
+ $("roleFields").innerHTML="";
+ ROLE_DEFS.forEach(([key,label])=>{
+  const row=document.createElement("div");
+  row.className="row";
+  const l=document.createElement("label");
+  l.textContent=label;
+  l.htmlFor="role_"+key;
+  const input=document.createElement("input");
+  input.type="number";
+  input.min="0";
+  input.max="50";
+  input.id="role_"+key;
+  input.value=s?.roles?.[key]??0;
+  row.append(l,input);
+  $("roleFields").appendChild(row);
+ });
+}
+
+async function createRoom(){
+ playerName=$("player").value.trim();
+ if(!playerName)return msg("Please enter your player name.");
+ setLoading(true);
+ msg("Creating your village...");
+ try{
+  const uid=await ensureLogin();
+  let code,created=false;
+  for(let i=0;i<10;i++){
+   code=makeCode();
+   const result=await db.ref("rooms/"+code).transaction(r=>
+    r===null?{
+     host:uid,
+     status:"waiting",
+     createdAt:firebase.database.ServerValue.TIMESTAMP,
+     settings:defaultSettings(),
+     players:{
+      [uid]:{
+       name:playerName,
+       joinedAt:firebase.database.ServerValue.TIMESTAMP
+      }
+     }
+    }:undefined
+   );
+   if(result.committed){created=true;break;}
+  }
+  if(!created)throw Error("Could not create room.");
+  openRoom(code);
+ }catch(e){
+  msg("Error: "+e.message);
+ }finally{
+  setLoading(false);
+ }
+}
+
+async function joinRoom(){
+ playerName=$("player").value.trim();
+ const code=$("roomCode").value.trim().toUpperCase();
+ if(!playerName||!code)return msg("Enter your name and room code.");
+ setLoading(true);
+ msg("Joining the village...");
+ try{
+  const uid=await ensureLogin();
+  const ref=db.ref("rooms/"+code);
+  const result=await ref.transaction(r=>{
+   if(!r||r.status!=="waiting")return;
+   r.players=r.players||{};
+   const limit=Math.min(50,Math.max(5,Number(r.settings?.maxPlayers)||50));
+   if(!r.players[uid]&&Object.keys(r.players).length>=limit)return;
+   r.players[uid]={
+    name:playerName,
+    joinedAt:firebase.database.ServerValue.TIMESTAMP
+   };
+   return r;
+  });
+  if(!result.committed)throw Error("Room unavailable, full, or game already started.");
+  openRoom(code);
+ }catch(e){
+  msg("Error: "+e.message);
+ }finally{
+  setLoading(false);
+ }
+}
+
+function openRoom(code){
+ cleanupListeners();
+ currentRoom=code;
+ settingsLoaded=false;
+ $("lobby").style.display="none";
+ $("room").style.display="block";
+ $("codeDisplay").textContent=code;
+ roomListener=s=>{
+  roomData=s.val();
+  if(!roomData){
+   $("roomMessage").textContent="This room no longer exists.";
+   return;
+  }
+  renderRoom();
+ };
+ db.ref("rooms/"+code).on("value",roomListener);
+}
+
+function renderRoom(){
+ const data=roomData;
+ const players=data.players||{};
+ const entries=Object.entries(players);
+ const uid=auth.currentUser.uid;
+ const host=data.host===uid;
+
+ $("hostPanel").classList.toggle("hidden",!host);
+ $("players").innerHTML="";
+
+ entries.forEach(([id,p],i)=>{
+  const d=document.createElement("div");
+  d.className="player";
+  const n=document.createElement("span");
+  n.textContent=(i+1)+". "+p.name;
+  const tag=document.createElement("span");
+  tag.className="host";
+  tag.textContent=id===data.host?"HOST":id===uid?"YOU":"";
+  d.append(n,tag);
+  $("players").appendChild(d);
+ });
+
+ $("count").textContent=entries.length+" / "+(data.settings?.maxPlayers||50)+" PLAYERS";
+ $("roomMessage").textContent=data.status==="started"?"The game has started.":entries.length<5?"Waiting for at least 5 players...":"The village is ready for setup!";
+
+ if(host&&!settingsLoaded){
+  loadSettings(data.settings||defaultSettings());
+  settingsLoaded=true;
+ }
+
+ if(data.assignments&&data.assignments[uid]){
+  const key=data.assignments[uid];
+  const role=ROLE_DEFS.find(r=>r[0]===key);
+  $("roleCard").classList.remove("hidden");
+  $("myRole").textContent=role?role[1]:key;
+  $("roleDescription").textContent=role?role[2]:"Your secret role";
+ }else{
+  $("roleCard").classList.add("hidden");
+ }
+ if(data.status==="started"&&host)$("manualPanel").classList.add("hidden");
+}
+
+function loadSettings(s){
+ $("maxPlayers").value=s.maxPlayers||50;
+ $("nightTime").value=s.timers?.night||60;
+ $("dayTime").value=s.timers?.day||180;
+ $("voteTime").value=s.timers?.vote||45;
+ $("distribution").value=s.distribution||"both";
+ buildRoleFields(s);
+}
+
+function isHost(){
+ return roomData&&auth.currentUser&&roomData.host===auth.currentUser.uid;
+}
+
+function readSettings(){
+ const roles={};
+ ROLE_DEFS.forEach(([key])=>{
+  roles[key]=Math.max(0,Math.min(50,Number($("role_"+key).value)||0));
+ });
+ return {
+  maxPlayers:Math.max(5,Math.min(50,Number($("maxPlayers").value)||50)),
+  timers:{
+   night:Math.max(10,Number($("nightTime").value)||60),
+   day:Math.max(30,Number($("dayTime").value)||180),
+   vote:Math.max(10,Number($("voteTime").value)||45)
+  },
+  distribution:$("distribution").value,
+  roles
+ };
+}
+
+async function saveSettings(){
+ if(!isHost())return;
+ const settings=readSettings();
+ try{
+  await db.ref("rooms/"+currentRoom+"/settings").set(settings);
+  $("hostMessage").textContent="Settings saved. Role total: "+Object.values(settings.roles).reduce((a,b)=>a+b,0);
+ }catch(e){
+  $("hostMessage").textContent="Save error: "+e.message;
+ }
+}
+
+function validateSetup(settings){
+ const count=Object.keys(roomData.players||{}).length;
+ const total=Object.values(settings.roles).reduce((a,b)=>a+b,0);
+ if(count<5)return "At least 5 players are required.";
+ if(count>settings.maxPlayers)return "Too many players for this room limit.";
+ if(total!==count)return "Role count is "+total+" but players count is "+count+". Make totals equal.";
+ return "";
+}
+
+async function startSetup(){
+ if(!isHost())return;
+ const settings=readSettings();
+ const error=validateSetup(settings);
+ if(error){
+  $("hostMessage").textContent=error;
+  return;
+ }
+ await db.ref("rooms/"+currentRoom+"/settings").set(settings);
+ if(settings.distribution==="random"){
+  await startRandomGame(settings);
+  return;
+ }
+ if(settings.distribution==="manual"){
+  buildManualPanel(settings);
+  return;
+ }
+ const choice=confirm("Press OK for RANDOM distribution, or Cancel for MANUAL assignment.");
+ if(choice)await startRandomGame(settings);
+ else buildManualPanel(settings);
+}
+
+function shuffled(a){
+ for(let i=a.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [a[i],a[j]]=[a[j],a[i]];
+ }
+ return a;
+}
+
+function makeRolePool(settings){
+ const pool=[];
+ ROLE_DEFS.forEach(([key])=>{
+  for(let i=0;i<(settings.roles[key]||0);i++)pool.push(key);
+ });
+ return shuffled(pool);
+}
+
+async function startRandomGame(settings){
+ const ids=Object.keys(roomData.players||{});
+ const pool=makeRolePool(settings);
+ const assignments={};
+ shuffled(ids).forEach((id,i)=>assignments[id]=pool[i]);
+ await db.ref("rooms/"+currentRoom).update({
+  assignments,
+  status:"started",
+  startedAt:firebase.database.ServerValue.TIMESTAMP
+ });
+ $("hostMessage").textContent="Game started! Roles have been assigned.";
+}
+
+function buildManualPanel(settings){
+ const ids=Object.keys(roomData.players||{});
+ const host=roomData.host;
+ const others=ids.filter(id=>id!==host);
+ $("manualFields").innerHTML="";
+ others.forEach(id=>{
+  const item=document.createElement("div");
+  item.className="manual-item";
+  const name=document.createElement("div");
+  name.textContent=roomData.players[id].name;
+  const select=document.createElement("select");
+  select.id="manual_"+id;
+  ROLE_DEFS.forEach(([key,label])=>{
+   const op=document.createElement("option");
+   op.value=key;
+   op.textContent=label;
+   select.appendChild(op);
+  });
+  item.append(name,select);
+  $("manualFields").appendChild(item);
+ });
+ $("manualPanel").classList.remove("hidden");
+ $("hostMessage").textContent="Choose roles for all players except yourself. Your role will be random.";
+}
+
+async function startManualGame(){
+ if(!isHost())return;
+ const settings=roomData.settings||readSettings();
+ const error=validateSetup(settings);
+ if(error){
+  $("hostMessage").textContent=error;
+  return;
+ }
+ const ids=Object.keys(roomData.players||{});
+ const host=roomData.host;
+ const others=ids.filter(id=>id!==host);
+ const remaining={...settings.roles};
+ const assignments={};
+
+ for(const id of others){
+  const key=$("manual_"+id)?.value;
+  if(!key||!remaining[key]){
+   $("hostMessage").textContent="Not enough copies of the selected role. Check role counts.";
+   return;
+  }
+  assignments[id]=key;
+  remaining[key]--;
+ }
+
+ const pool=[];
+ Object.entries(remaining).forEach(([key,n])=>{
+  for(let i=0;i<n;i++)pool.push(key);
+ });
+ if(pool.length!==1){
+  $("hostMessage").textContent="Manual assignment must leave exactly one role for the host.";
+  return;
+ }
+ assignments[host]=pool[0];
+ await db.ref("rooms/"+currentRoom).update({
+  assignments,
+  status:"started",
+  startedAt:firebase.database.ServerValue.TIMESTAMP
+ });
+ $("hostMessage").textContent="Game started! Your role is random, as requested.";
+}
+
+async function copyCode(){
+ try{
+  await navigator.clipboard.writeText(currentRoom);
+  $("roomMessage").textContent="Room code copied!";
+ }catch(e){
+  $("roomMessage").textContent="Room code: "+currentRoom;
+ }
+}
+
+function cleanupListeners(){
+ if(currentRoom&&roomListener)db.ref("rooms/"+currentRoom).off("value",roomListener);
+ roomListener=null;
+}
+
+async function leaveRoom(){
+ if(!currentRoom||!auth.currentUser)return;
+ const code=currentRoom,uid=auth.currentUser.uid,ref=db.ref("rooms/"+code);
+ try{
+  cleanupListeners();
+  const snap=await ref.once("value");
+  if(snap.exists()){
+   const d=snap.val();
+   if(d.host===uid)await ref.remove();
+   else await ref.child("players/"+uid).remove();
+  }
+  currentRoom=null;
+  roomData=null;
+  settingsLoaded=false;
+  $("room").style.display="none";
+  $("lobby").style.display="block";
+  msg("You left the village.");
+ }catch(e){
+  $("roomMessage").textContent="Error: "+e.message;
+ }
+}
+
+auth.signInAnonymously().catch(e=>msg("Authentication error: "+e.message));
+</script>
+</body>
+</html>
